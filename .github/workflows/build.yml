@@ -1,0 +1,237 @@
+name: 🚀 Taby Browser - Build All Platforms
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. 1.0.0)'
+        required: true
+
+env:
+  CARGO_TERM_COLOR: always
+  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+
+jobs:
+  # ── Windows (.exe + .msi) ─────────────────────────────────────────────────
+  build-windows:
+    name: 🪟 Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: './src-tauri -> target' }
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Taby for Windows
+        uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Taby Browser ${{ github.ref_name }}'
+          releaseBody: |
+            ## 🚀 Taby Browser ${{ github.ref_name }}
+            متصفح Taby - سريع، خاص، وأدوات مطورين مدمجة
+            
+            ### تثبيت على Windows
+            - `.exe` - مثبّت NSIS (مُوصى به)
+            - `.msi` - مثبّت MSI
+          releaseDraft: false
+          prerelease: false
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: taby-windows
+          path: |
+            src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/msi/*.msi
+
+  # ── macOS (.dmg + .app) ───────────────────────────────────────────────────
+  build-macos:
+    name: 🍎 macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: './src-tauri -> target' }
+      - name: Install dependencies
+        run: npm ci
+      - name: Build Universal macOS binary
+        run: |
+          npm run build
+          cd src-tauri
+          cargo build --release --target aarch64-apple-darwin
+          cargo build --release --target x86_64-apple-darwin
+          lipo -create -output target/release/taby \
+            target/aarch64-apple-darwin/release/taby \
+            target/x86_64-apple-darwin/release/taby
+      - name: Build Tauri macOS bundle
+        uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Taby Browser ${{ github.ref_name }}'
+          args: --target universal-apple-darwin
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: taby-macos
+          path: |
+            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+
+  # ── Linux (.deb + .AppImage + .rpm) ──────────────────────────────────────
+  build-linux:
+    name: 🐧 Linux
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with: { workspaces: './src-tauri -> target' }
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            libssl-dev \
+            libglib2.0-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Build Taby for Linux
+        uses: tauri-apps/tauri-action@v0
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Taby Browser ${{ github.ref_name }}'
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: taby-linux
+          path: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/rpm/*.rpm
+
+  # ── Android (.apk + .aab) ─────────────────────────────────────────────────
+  build-android:
+    name: 🤖 Android
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,x86_64-linux-android,i686-linux-android
+      - uses: actions/setup-java@v4
+        with: { java-version: '17', distribution: 'temurin' }
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Install NDK
+        run: sdkmanager "ndk;25.2.9519653"
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Initialize Android project
+        run: npx tauri android init
+      - name: Build Android APK
+        run: npx tauri android build --apk
+        env:
+          NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.2.9519653
+          ANDROID_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Build Android AAB (for Play Store)
+        run: npx tauri android build --aab
+        env:
+          NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/25.2.9519653
+      - name: Upload Android artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: taby-android
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+            src-tauri/gen/android/app/build/outputs/bundle/**/*.aab
+
+  # ── iOS (.ipa) ────────────────────────────────────────────────────────────
+  build-ios:
+    name: 🍏 iOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,x86_64-apple-ios
+      - name: Install Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: 'latest-stable' }
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Initialize iOS project
+        run: npx tauri ios init
+      - name: Build iOS IPA
+        run: npx tauri ios build
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      - name: Upload iOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: taby-ios
+          path: src-tauri/gen/apple/build/**/*.ipa
+
+  # ── Publish Release ───────────────────────────────────────────────────────
+  publish:
+    name: 📦 Publish Release
+    needs: [build-windows, build-macos, build-linux, build-android, build-ios]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            taby-windows/**
+            taby-macos/**
+            taby-linux/**
+            taby-android/**
+            taby-ios/**
+          generate_release_notes: true
+          name: "🚀 Taby Browser ${{ github.ref_name }}"
+          body: |
+            ## 🌐 Taby Browser ${{ github.ref_name }}
+            
+            **متصفح مفتوح المصدر — سريع، خاص، وأدوات مطورين مدمجة**
+            
+            ### 📥 التنزيل
+            | النظام | الملف | الحجم |
+            |--------|-------|-------|
+            | 🪟 Windows | `Taby_Setup.exe` | ~8MB |
+            | 🍎 macOS | `Taby.dmg` | ~12MB |
+            | 🐧 Linux | `Taby.deb` / `Taby.AppImage` | ~10MB |
+            | 🤖 Android | `Taby.apk` | ~15MB |
+            | 🍏 iOS | `Taby.ipa` | ~18MB |
