@@ -123,7 +123,26 @@ pub async fn extract_archive(path: String, dest: String) -> Result<String, Strin
         "zip" => {
             let file = std::fs::File::open(&path).map_err(|e| e.to_string())?;
             let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
-            archive.extract(&dest).map_err(|e| e.to_string())?;
+            
+            for i in 0..archive.len() {
+                let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+                let outpath = match file.enclosed_name() {
+                    Some(path) => std::path::PathBuf::from(&dest).join(path),
+                    None => continue,
+                };
+
+                if (*file.name()).ends_with('/') {
+                    std::fs::create_dir_all(&outpath).map_err(|e| e.to_string())?;
+                } else {
+                    if let Some(p) = outpath.parent() {
+                        if !p.exists() {
+                            std::fs::create_dir_all(&p).map_err(|e| e.to_string())?;
+                        }
+                    }
+                    let mut outfile = std::fs::File::create(&outpath).map_err(|e| e.to_string())?;
+                    std::io::copy(&mut file, &mut outfile).map_err(|e| e.to_string())?;
+                }
+            }
             Ok(format!("Extracted to {}", dest))
         }
         _ => Err(format!("Unsupported format: {}", ext)),

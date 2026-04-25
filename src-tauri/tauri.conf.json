@@ -67,9 +67,7 @@
         "languages": ["Arabic", "English"],
         "displayInstallMode": true
       },
-      "webviewInstallMode": {
-        "type": "embedBootstrapper"
-      }
+      "webviewInstallMode": "embedBootstrapper"
     },
     "macOS": {
       "frameworks": [],
