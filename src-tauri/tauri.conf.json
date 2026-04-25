@@ -64,10 +64,11 @@
     "windows": {
       "wix": {},
       "nsis": {
-        "languages": ["Arabic", "English"],
         "displayInstallMode": true
       },
-      "webviewInstallMode": "embedBootstrapper"
+      "webviewInstallMode": {
+        "type": "embedBootstrapper"
+      }
     },
     "macOS": {
       "frameworks": [],
