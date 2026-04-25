@@ -12,8 +12,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-  TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
 
 jobs:
   # ── Windows (.exe + .msi) ─────────────────────────────────────────────────
@@ -32,6 +30,9 @@ jobs:
       - name: Build Taby for Windows
         uses: tauri-apps/tauri-action@v0
         with:
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
           releaseBody: |
@@ -70,6 +71,9 @@ jobs:
       - name: Build Tauri macOS bundle
         uses: tauri-apps/tauri-action@v0
         with:
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
           args: --target universal-apple-darwin
@@ -111,6 +115,9 @@ jobs:
       - name: Build Taby for Linux
         uses: tauri-apps/tauri-action@v0
         with:
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
       - name: Upload Linux artifacts
