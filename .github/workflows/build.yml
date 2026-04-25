@@ -29,10 +29,10 @@ jobs:
         run: npm install
       - name: Build Taby for Windows
         uses: tauri-apps/tauri-action@v0
-        with:
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
           releaseBody: |
@@ -70,10 +70,10 @@ jobs:
         run: npm install
       - name: Build Tauri macOS bundle
         uses: tauri-apps/tauri-action@v0
-        with:
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
           args: --target universal-apple-darwin
@@ -114,10 +114,10 @@ jobs:
         run: npm install
       - name: Build Taby for Linux
         uses: tauri-apps/tauri-action@v0
-        with:
         env:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with:
           tagName: ${{ github.ref_name }}
           releaseName: 'Taby Browser ${{ github.ref_name }}'
       - name: Upload Linux artifacts
@@ -190,11 +190,6 @@ jobs:
         run: npx tauri ios init
       - name: Build iOS IPA
         run: npx tauri ios build
-        env:
-          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }} # تم التعليق للسماح بالبناء بدون توقيع رسمي
-          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }} # تم التعليق
-          # APPLE_PROVISIONING_PROFILE: ${{ secrets.APPLE_PROVISIONING_PROFILE }} # تم التعليق
-          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }} # تم التعليق
       - name: Upload iOS artifacts
         uses: actions/upload-artifact@v4
         with:
